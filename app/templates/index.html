@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Explore MotionCLIP's text2motion generation ability</title>
+    <!-- Include Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <h1>Explore MotionCLIP's text2motion Generation Ability</h1>
+
+    {% if video %}
+    <!-- Display the formatted video title -->
+    <h2 id="video-title">{{ video_title }}</h2>
+
+    <div class="video-container">
+        <!-- Left Arrow -->
+        <a href="/?video_name={{ prev_video }}" class="arrow left-arrow">
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="none" stroke="#ff6600" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="25 5 10 20 25 35"></polyline>
+            </svg>
+        </a>
+        <!-- Video Player -->
+        <video id="video-player" width="640" height="480" controls autoplay muted playsinline loop>
+            <source src="/videos/{{ video }}" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+        <!-- Right Arrow -->
+        <a href="/?video_name={{ next_video }}" class="arrow right-arrow">
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="none" stroke="#ff6600" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 5 30 20 15 35"></polyline>
+            </svg>
+        </a>
+    </div>
+
+    <!-- ... existing scripts ... -->
+
+    {% else %}
+    <p>No videos available.</p>
+    {% endif %}
+
+    <!-- Form with updated design -->
+    <form method="post" id="prompt-form" class="prompt-form">
+        <div class="input-container">
+            <label for="prompt-input" class="visually-hidden">Prompt</label>
+            <input type="text" id="prompt-input" name="prompt" placeholder="Type your prompt here" required aria-label="Prompt">
+            <button type="submit" id="submit-button" aria-label="Submit">
+                <!-- Arrow Icon -->
+                <svg id="submit-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="#ff6600" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+                <!-- Spinner (Hidden by default) -->
+                <div id="spinner" class="spinner" style="display: none;"></div>
+            </button>
+        </div>
+    </form>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>
