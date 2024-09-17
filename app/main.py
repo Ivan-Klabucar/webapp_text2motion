@@ -57,32 +57,39 @@ async def index(request: Request, video_name: str = None):
         },
     )
 
+def display_first_vid_w_error_message(prompt, error_msg):
+    videos = get_video_list()
+    current_index = 0
+    video = videos[current_index]
+    video_title = os.path.splitext(video)[0].replace("_", " ").title()
+    prev_video = videos[current_index - 1] if current_index > 0 else videos[-1]
+    next_video = (
+        videos[current_index + 1] if current_index < len(videos) - 1 else videos[0]
+    )
+    context = {
+        "request": request,
+        "error_message": error_msg,
+        "prompt": prompt,
+        "video": video,
+        "video_title": video_title,
+        "prev_video": prev_video,
+        "next_video": next_video,
+        "videos": videos,  # Pass the list of videos
+        "current_index": current_index,  # Pass the current index
+    }
+    return templates.TemplateResponse("index.html", context)
+
 @app.post("/", response_class=HTMLResponse)
 async def create_video(request: Request, prompt: str = Form(...)):
     video_name = await generate_video(prompt)
-    if video_name:
-        return RedirectResponse(url=f"/?video_name={video_name}", status_code=303)
+    if len(get_video_list()) < 200:
+        if video_name:
+            return RedirectResponse(url=f"/?video_name={video_name}", status_code=303)
+        else:
+            return display_first_vid_w_error_message(prompt, 'Something went wrong, displaying first video.')
     else:
-        videos = get_video_list()
-        current_index = 0
-        video = videos[current_index]
-        video_title = os.path.splitext(video)[0].replace("_", " ").title()
-        prev_video = videos[current_index - 1] if current_index > 0 else videos[-1]
-        next_video = (
-            videos[current_index + 1] if current_index < len(videos) - 1 else videos[0]
-        )
-        context = {
-            "request": request,
-            "error_message": "Something went wrong, displaying first video",
-            "prompt": prompt,
-            "video": video,
-            "video_title": video_title,
-            "prev_video": prev_video,
-            "next_video": next_video,
-            "videos": videos,  # Pass the list of videos
-            "current_index": current_index,  # Pass the current index
-        }
-        return templates.TemplateResponse("index.html", context)
+        return display_first_vid_w_error_message(prompt, 'More than 200 videos already exist, cannot generate more.')
+
 
 
 async def generate_video(prompt):
