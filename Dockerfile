@@ -10,6 +10,7 @@ COPY . .
 RUN mkdir -p /src/app/videos
 
 ENV VIDEO_DIR=/src/app/videos
+ENV VIDEOGEN_SERVICE_HOST=text2motion
 
 EXPOSE 8000
 

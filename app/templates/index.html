@@ -8,7 +8,8 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <h1>Explore MotionCLIP's text2motion Generation Ability</h1>
+    <h1>MotionCLIP: Generate Stickman Motion By Submitting a Prompt!</h1>
+    <h3>Created by <i>Ivan Klabucar</i></h3>
 
     {% if video %}
     <!-- Display the formatted video title -->
@@ -22,7 +23,7 @@
             </svg>
         </a>
         <!-- Video Player -->
-        <video id="video-player" width="640" height="480" controls autoplay muted playsinline loop>
+        <video id="video-player" width="576" height="432" controls autoplay muted playsinline loop>
             <source src="/videos/{{ video }}" type="video/mp4">
             Your browser does not support the video tag.
         </video>
@@ -44,7 +45,7 @@
     <form method="post" id="prompt-form" class="prompt-form">
         <div class="input-container">
             <label for="prompt-input" class="visually-hidden">Prompt</label>
-            <input type="text" id="prompt-input" name="prompt" placeholder="Type your prompt here" required aria-label="Prompt">
+            <input type="text" id="prompt-input" name="prompt" placeholder="Type your prompt here" required aria-label="Prompt" value="{{ prompt | default('') }}">
             <button type="submit" id="submit-button" aria-label="Submit">
                 <!-- Arrow Icon -->
                 <svg id="submit-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="#ff6600" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -55,7 +56,13 @@
                 <div id="spinner" class="spinner" style="display: none;"></div>
             </button>
         </div>
+        {% if error_message %}
+        <p class="error-message">{{ error_message }}</p>
+        {% endif %}
     </form>
+
+    <!-- Disclaimer -->
+    <p class="disclaimer">Note: Video generation usually takes a few seconds.</p>
 
     <script src="/static/script.js"></script>
 </body>

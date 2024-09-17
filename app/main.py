@@ -1,4 +1,6 @@
 import asyncio
+import aiohttp
+
 import os
 import os.path  # Import os.path for path manipulations
 
@@ -55,25 +57,44 @@ async def index(request: Request, video_name: str = None):
         },
     )
 
-
 @app.post("/", response_class=HTMLResponse)
 async def create_video(request: Request, prompt: str = Form(...)):
-    # Start the video generation process
     video_name = await generate_video(prompt)
-    # Redirect to the new video
-    return RedirectResponse(url=f"/?video_name={video_name}", status_code=303)
+    if video_name:
+        return RedirectResponse(url=f"/?video_name={video_name}", status_code=303)
+    else:
+        videos = get_video_list()
+        current_index = 0
+        video = videos[current_index]
+        video_title = os.path.splitext(video)[0].replace("_", " ").title()
+        prev_video = videos[current_index - 1] if current_index > 0 else videos[-1]
+        next_video = (
+            videos[current_index + 1] if current_index < len(videos) - 1 else videos[0]
+        )
+        context = {
+            "request": request,
+            "error_message": "Something went wrong, displaying first video",
+            "prompt": prompt,
+            "video": video,
+            "video_title": video_title,
+            "prev_video": prev_video,
+            "next_video": next_video,
+            "videos": videos,  # Pass the list of videos
+            "current_index": current_index,  # Pass the current index
+        }
+        return templates.TemplateResponse("index.html", context)
 
 
 async def generate_video(prompt):
-    # Simulate external API call
-    await asyncio.sleep(5)  # Simulate processing time
-
-    # Generate a dummy video file (copying an existing one)
-    source_video = os.path.join(VIDEO_DIRECTORY, get_video_list()[0])
-    new_video_name = f"{prompt.replace(' ', '_')}.mp4"
-    new_video_path = os.path.join(VIDEO_DIRECTORY, new_video_name)
-
-    with open(source_video, "rb") as src, open(new_video_path, "wb") as dst:
-        dst.write(src.read())
-
-    return new_video_name
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.post(f"http://{os.getenv('VIDEOGEN_SERVICE_HOST')}:8000/text2motion", json={"user_prompt": prompt}) as resp:
+                if resp.status == 200:
+                    response_json = await resp.json()
+                    video_name = response_json.get("video_name")
+                    return video_name
+                else:
+                    return None
+        except Exception as e:
+            print(f"Error: {e}")
+            return None
