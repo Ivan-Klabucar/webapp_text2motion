@@ -1,13 +1,16 @@
 import asyncio
 import aiohttp
-
 import os
-import os.path  # Import os.path for path manipulations
+import os.path
+import csv
+import re
 
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+
+from .forbidden_words import FORBIDDEN_WORDS
 
 app = FastAPI()
 
@@ -18,10 +21,29 @@ app.mount("/videos", StaticFiles(directory=os.getenv("VIDEO_DIR")), name="videos
 templates = Jinja2Templates(directory="app/templates")
 
 VIDEO_DIRECTORY = os.getenv("VIDEO_DIR")
+RATING_FILE = f"{os.getenv('VIDEO_DIR')}/ratings.csv"
+
+# Define forbidden words
+FORBIDDEN_WORDS_RE = re.compile(r'\b(' + '|'.join(map(re.escape, FORBIDDEN_WORDS)) + r')\b', re.IGNORECASE)
 
 
 def get_video_list():
     return sorted([f for f in os.listdir(VIDEO_DIRECTORY) if f.endswith(".mp4")])
+
+
+def read_ratings():
+    ratings = {}
+    if os.path.exists(RATING_FILE):
+        with open(RATING_FILE, 'r') as f:
+            reader = csv.reader(f)
+            for row in reader:
+                video_name, rating = row
+                rating = int(rating)
+                if video_name in ratings:
+                    ratings[video_name].append(rating)
+                else:
+                    ratings[video_name] = [rating]
+    return ratings
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -44,6 +66,15 @@ async def index(request: Request, video_name: str = None):
         videos[current_index + 1] if current_index < len(videos) - 1 else videos[0]
     )
 
+    # Get average rating
+    ratings = read_ratings()
+    video_ratings = ratings.get(video, [])
+    number_of_ratings = len(video_ratings)
+    if video_ratings:
+        average_rating = round(sum(video_ratings) / len(video_ratings), 2)
+    else:
+        average_rating = "No ratings yet"
+
     return templates.TemplateResponse(
         "index.html",
         {
@@ -52,12 +83,15 @@ async def index(request: Request, video_name: str = None):
             "video_title": video_title,
             "prev_video": prev_video,
             "next_video": next_video,
-            "videos": videos,  # Pass the list of videos
-            "current_index": current_index,  # Pass the current index
+            "videos": videos,
+            "current_index": current_index,
+            "average_rating": average_rating,
+            "number_of_ratings": number_of_ratings,
         },
     )
 
-def display_first_vid_w_error_message(prompt, error_msg):
+
+def display_first_vid_w_error_message(request, prompt, error_msg):
     videos = get_video_list()
     current_index = 0
     video = videos[current_index]
@@ -66,6 +100,14 @@ def display_first_vid_w_error_message(prompt, error_msg):
     next_video = (
         videos[current_index + 1] if current_index < len(videos) - 1 else videos[0]
     )
+    # Get average rating
+    ratings = read_ratings()
+    video_ratings = ratings.get(video, [])
+    number_of_ratings = len(video_ratings)
+    if video_ratings:
+        average_rating = round(sum(video_ratings) / len(video_ratings), 2)
+    else:
+        average_rating = "No ratings yet"
     context = {
         "request": request,
         "error_message": error_msg,
@@ -74,22 +116,33 @@ def display_first_vid_w_error_message(prompt, error_msg):
         "video_title": video_title,
         "prev_video": prev_video,
         "next_video": next_video,
-        "videos": videos,  # Pass the list of videos
-        "current_index": current_index,  # Pass the current index
+        "videos": videos,
+        "current_index": current_index,
+        "average_rating": average_rating,
+        "number_of_ratings": number_of_ratings,
     }
     return templates.TemplateResponse("index.html", context)
 
+
 @app.post("/", response_class=HTMLResponse)
 async def create_video(request: Request, prompt: str = Form(...)):
+    # Check for offensive content
+    if FORBIDDEN_WORDS_RE.search(prompt):
+        error_message = "Your prompt contains inappropriate language. Please try again."
+        return display_first_vid_w_error_message(request, prompt, error_message)
+
     video_name = await generate_video(prompt)
     if len(get_video_list()) < 200:
         if video_name:
             return RedirectResponse(url=f"/?video_name={video_name}", status_code=303)
         else:
-            return display_first_vid_w_error_message(prompt, 'Something went wrong, displaying first video.')
+            return display_first_vid_w_error_message(
+                request, prompt, 'Something went wrong, displaying first video.'
+            )
     else:
-        return display_first_vid_w_error_message(prompt, 'More than 200 videos already exist, cannot generate more.')
-
+        return display_first_vid_w_error_message(
+            request, prompt, 'More than 200 videos already exist, cannot generate more.'
+        )
 
 
 async def generate_video(prompt):
@@ -105,3 +158,36 @@ async def generate_video(prompt):
         except Exception as e:
             print(f"Error: {e}")
             return None
+
+
+@app.post("/rate")
+async def rate_video(request: Request):
+    data = await request.json()
+    video_name = data.get('video_name')
+    rating = data.get('rating')
+    if not video_name or not rating:
+        return {"status": "error", "message": "Invalid data"}
+
+    # Validate rating
+    try:
+        rating = int(rating)
+        if rating < 1 or rating > 5:
+            return {"status": "error", "message": "Invalid rating value"}
+    except ValueError:
+        return {"status": "error", "message": "Invalid rating value"}
+
+    # Record the rating in 'ratings.csv'
+    with open(RATING_FILE, 'a', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow([video_name, rating])
+
+    # Calculate new average rating
+    ratings = read_ratings()
+    video_ratings = ratings.get(video_name, [])
+    number_of_ratings = len(video_ratings)
+    if video_ratings:
+        average_rating = sum(video_ratings) / len(video_ratings)
+    else:
+        average_rating = 0
+
+    return {"status": "success", "average_rating": average_rating, "number_of_ratings": number_of_ratings}

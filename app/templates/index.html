@@ -1,16 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
     <meta charset="UTF-8">
     <title>Explore MotionCLIP's text2motion generation ability</title>
     <!-- Include Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.1/css/all.css">
 </head>
 <body>
-    <h1>MotionCLIP: Generate Stickman Motion By Submitting a Prompt!</h1>
-    <h3>Created by <i>Ivan Klabucar</i></h3>
-
+    <h1><a href="https://github.com/GuyTevet/MotionCLIP" style="text-decoration: none; color: inherit;">MotionCLIP:<sup><i class="fab fa-github" style='font-size:22px'></i></sup></a> Generate Stickman Motion By Submitting a Prompt!</h1>
+    <h3><a href="https://github.com/Ivan-Klabucar/text2motion_generator" style="text-decoration: none; color: inherit;">Created by <i>Ivan Klabucar</i><sup><i class="fab fa-github" style='font-size:22px'></i></sup></a></h3>
+    <p>
+        Rate how realistic the generated motions are<br/>and help us uncover the model's strengths and weaknesses!
+    </p>
+    
     {% if video %}
     <!-- Display the formatted video title -->
     <h2 id="video-title">{{ video_title }}</h2>
@@ -23,7 +28,7 @@
             </svg>
         </a>
         <!-- Video Player -->
-        <video id="video-player" width="570" height="428" controls autoplay muted playsinline loop>
+        <video id="video-player" width="480" height="300" controls autoplay muted playsinline loop>
             <source src="/videos/{{ video }}" type="video/mp4">
             Your browser does not support the video tag.
         </video>
@@ -35,7 +40,16 @@
         </a>
     </div>
 
-    <!-- ... existing scripts ... -->
+    <!-- Rating Section -->
+    <div class="rating">
+        <span class="disclaimer">Rate Realism of Generated Motion:</span>
+        <div id="stars" data-video="{{ video }}">
+            {% for i in range(1,6) %}
+                <span class="star" data-value="{{ i }}">&#9733;</span>
+            {% endfor %}
+        </div>
+        <div id="average-rating" class="disclaimer">Average Rating: {{ average_rating }}, Number of Ratings: {{ number_of_ratings }}</div>
+    </div>
 
     {% else %}
     <p>No videos available.</p>
@@ -63,8 +77,7 @@
 
     <!-- Disclaimer -->
     <p class="disclaimer">
-        Note: Video generation usually takes a few seconds.<br>
-        All generated videos are backed up to S3.
+        Note: Video generation usually takes a few seconds. All generated videos are backed up to S3.
     </p>
 
     <script src="/static/script.js"></script>
