@@ -50,10 +50,21 @@ def read_ratings(with_ip=False):
             result[video_name] = [rating]
     return result
 
+def get_clients_ip(request):
+    forwarded_for = request.headers.get('X-Forwarded-For')
+    
+    if forwarded_for:
+        # The X-Forwarded-For header can contain a list of IPs, we need the first one
+        client_host_ip = forwarded_for.split(",")[0]
+    else:
+        # Fallback to request.client.host if X-Forwarded-For is not set
+        client_host_ip = str(request.client.host)
+    return client_host_ip
+
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request, video_name: str = None):
-    client_host_ip = str(request.client.host)
+    client_host_ip = get_clients_ip(request)
     videos = get_video_list()
     if not videos:
         return templates.TemplateResponse(
@@ -100,7 +111,7 @@ async def index(request: Request, video_name: str = None):
 
 
 def display_first_vid_w_error_message(request, prompt, error_msg):
-    client_host_ip = str(request.client.host)
+    client_host_ip = get_clients_ip(request)
     videos = get_video_list()
     current_index = 0
     video = videos[current_index]
@@ -174,7 +185,7 @@ async def generate_video(prompt):
 @app.post("/rate")
 async def rate_video(request: Request):
     data = await request.json()
-    client_host_ip = request.client.host
+    client_host_ip = get_clients_ip(request)
     video_name = data.get('video_name')
     rating = data.get('rating')
     if not video_name or not rating:
