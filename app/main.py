@@ -31,7 +31,7 @@ def get_video_list():
     return sorted([f for f in os.listdir(VIDEO_DIRECTORY) if f.endswith(".mp4")])
 
 
-def read_ratings():
+def read_ratings(with_ip=False):
     ratings = {}
     if os.path.exists(RATING_FILE):
         with open(RATING_FILE, 'r') as f:
@@ -41,6 +41,7 @@ def read_ratings():
                 rating = int(rating)
                 ratings[(video_name, ip)] = rating
     
+    if with_ip: return ratings
     result = {}
     for (video_name, ip), rating in ratings.items():
         if video_name in result:
@@ -52,6 +53,7 @@ def read_ratings():
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request, video_name: str = None):
+    client_host_ip = str(request.client.host)
     videos = get_video_list()
     if not videos:
         return templates.TemplateResponse(
@@ -72,6 +74,7 @@ async def index(request: Request, video_name: str = None):
 
     # Get average rating
     ratings = read_ratings()
+    ratings_w_ip = read_ratings(with_ip=True)
     video_ratings = ratings.get(video, [])
     number_of_ratings = len(video_ratings)
     if video_ratings:
@@ -91,11 +94,13 @@ async def index(request: Request, video_name: str = None):
             "current_index": current_index,
             "average_rating": average_rating,
             "number_of_ratings": number_of_ratings,
+            "existing_rating": ratings_w_ip.get((video, client_host_ip)),
         },
     )
 
 
 def display_first_vid_w_error_message(request, prompt, error_msg):
+    client_host_ip = str(request.client.host)
     videos = get_video_list()
     current_index = 0
     video = videos[current_index]
@@ -106,6 +111,7 @@ def display_first_vid_w_error_message(request, prompt, error_msg):
     )
     # Get average rating
     ratings = read_ratings()
+    ratings_w_ip = read_ratings(with_ip=True)
     video_ratings = ratings.get(video, [])
     number_of_ratings = len(video_ratings)
     if video_ratings:
@@ -124,6 +130,7 @@ def display_first_vid_w_error_message(request, prompt, error_msg):
         "current_index": current_index,
         "average_rating": average_rating,
         "number_of_ratings": number_of_ratings,
+        "existing_rating": ratings_w_ip.get((video, client_host_ip)),
     }
     return templates.TemplateResponse("index.html", context)
 
