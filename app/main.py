@@ -37,13 +37,17 @@ def read_ratings():
         with open(RATING_FILE, 'r') as f:
             reader = csv.reader(f)
             for row in reader:
-                video_name, rating = row
+                video_name, rating, ip = row
                 rating = int(rating)
-                if video_name in ratings:
-                    ratings[video_name].append(rating)
-                else:
-                    ratings[video_name] = [rating]
-    return ratings
+                ratings[(video_name, ip)] = rating
+    
+    result = {}
+    for (video_name, ip), rating in ratings.items():
+        if video_name in result:
+            result[video_name].append(rating)
+        else:
+            result[video_name] = [rating]
+    return result
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -163,6 +167,7 @@ async def generate_video(prompt):
 @app.post("/rate")
 async def rate_video(request: Request):
     data = await request.json()
+    client_host_ip = request.client.host
     video_name = data.get('video_name')
     rating = data.get('rating')
     if not video_name or not rating:
@@ -179,7 +184,7 @@ async def rate_video(request: Request):
     # Record the rating in 'ratings.csv'
     with open(RATING_FILE, 'a', newline='') as f:
         writer = csv.writer(f)
-        writer.writerow([video_name, rating])
+        writer.writerow([video_name, rating, client_host_ip])
 
     # Calculate new average rating
     ratings = read_ratings()
