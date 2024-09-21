@@ -60,3 +60,55 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+
+// script.js
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Existing code...
+
+    // Modal functionality
+    var videoListButton = document.getElementById('video-list-button');
+    var modal = document.getElementById('video-list-modal');
+    var closeButton = document.querySelector('.close-button');
+
+    videoListButton.addEventListener('click', function() {
+        modal.style.display = 'block';
+    });
+
+    closeButton.addEventListener('click', function() {
+        modal.style.display = 'none';
+    });
+
+    window.addEventListener('click', function(event) {
+        if (event.target == modal) {
+            modal.style.display = 'none';
+        }
+    });
+
+    // Filtering the video list
+    var videoSearchInput = document.getElementById('video-search-input');
+
+    videoSearchInput.addEventListener('input', function() {
+        var filter = this.value.toLowerCase();
+        var videoItems = document.querySelectorAll('.video-item');
+
+        videoItems.forEach(function(item) {
+            var text = item.textContent.toLowerCase();
+            if (text.includes(filter)) {
+                item.style.display = '';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    });
+
+    // Navigate to selected video
+    document.querySelectorAll('.video-item').forEach(function(item) {
+        item.addEventListener('click', function() {
+            var videoName = this.getAttribute('data-video-name');
+            window.location.href = '/?video_name=' + encodeURIComponent(videoName);
+        });
+    });
+});
+

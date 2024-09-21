@@ -17,8 +17,29 @@
     </p>
     
     {% if video %}
-    <!-- Display the formatted video title -->
-    <h2 id="video-title">{{ video_title }}</h2>
+    <!-- Display the formatted video title with the icon -->
+    <div id="video-title-container">
+        <h2 id="video-title">{{ video_title }}</h2>
+        <button id="video-list-button" aria-label="Open video list">
+            <!-- Downward Arrow Icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="#ff6600" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="5 7 10 12 15 7"></polyline>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Video List Modal -->
+    <div id="video-list-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <input type="text" id="video-search-input" placeholder="Search videos..." />
+            <ul id="video-list">
+                {% for vid in videos %}
+                <li class="video-item" data-video-name="{{ vid }}">{{ vid }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
 
     <div class="video-container">
         <!-- Left Arrow -->
