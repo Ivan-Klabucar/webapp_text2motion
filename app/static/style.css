@@ -87,7 +87,7 @@ h3 {
 .prompt-form {
     display: flex;
     justify-content: center;
-    margin-top: 5px;
+    margin-top: 20px;
     margin-bottom: 5px;
 }
 
@@ -200,7 +200,7 @@ h3 {
 
 /* Rating styles */
 .rating {
-    margin-top: 5px;
+    margin-top: 0px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -211,7 +211,7 @@ h3 {
 }
 
 .rating .star {
-    font-size: 30px;
+    font-size: 25px;
     color: #ccc;
     cursor: pointer;
     margin: 0 5px;
