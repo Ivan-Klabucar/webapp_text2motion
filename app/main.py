@@ -12,6 +12,8 @@ from fastapi.templating import Jinja2Templates
 
 from .forbidden_words import FORBIDDEN_WORDS
 
+ALLOWED_CHARACTERS_RE = re.compile(r"[^a-zA-Z0-9\s,.!?']+")
+
 app = FastAPI()
 
 # Mount static directories
@@ -24,7 +26,9 @@ VIDEO_DIRECTORY = os.getenv("VIDEO_DIR")
 RATING_FILE = f"{os.getenv('VIDEO_DIR')}/ratings.csv"
 
 # Define forbidden words
-FORBIDDEN_WORDS_RE = re.compile(r'\b(' + '|'.join(map(re.escape, FORBIDDEN_WORDS)) + r')\b', re.IGNORECASE)
+FORBIDDEN_WORDS_RE = re.compile(
+    r"\b(" + "|".join(map(re.escape, FORBIDDEN_WORDS)) + r")\b", re.IGNORECASE
+)
 
 
 def get_video_list():
@@ -34,14 +38,15 @@ def get_video_list():
 def read_ratings(with_ip=False):
     ratings = {}
     if os.path.exists(RATING_FILE):
-        with open(RATING_FILE, 'r') as f:
+        with open(RATING_FILE, "r") as f:
             reader = csv.reader(f)
             for row in reader:
                 video_name, rating, ip = row
                 rating = int(rating)
                 ratings[(video_name, ip)] = rating
-    
-    if with_ip: return ratings
+
+    if with_ip:
+        return ratings
     result = {}
     for (video_name, ip), rating in ratings.items():
         if video_name in result:
@@ -50,9 +55,10 @@ def read_ratings(with_ip=False):
             result[video_name] = [rating]
     return result
 
+
 def get_clients_ip(request):
-    forwarded_for = request.headers.get('X-Forwarded-For')
-    
+    forwarded_for = request.headers.get("X-Forwarded-For")
+
     if forwarded_for:
         # The X-Forwarded-For header can contain a list of IPs, we need the first one
         client_host_ip = forwarded_for.split(",")[0]
@@ -148,6 +154,7 @@ def display_first_vid_w_error_message(request, prompt, error_msg):
 
 @app.post("/", response_class=HTMLResponse)
 async def create_video(request: Request, prompt: str = Form(...)):
+    prompt = ALLOWED_CHARACTERS_RE.sub("", prompt)
     # Check for offensive content
     if FORBIDDEN_WORDS_RE.search(prompt):
         error_message = "Your prompt contains inappropriate language. Please try again."
@@ -159,18 +166,21 @@ async def create_video(request: Request, prompt: str = Form(...)):
             return RedirectResponse(url=f"/?video_name={video_name}", status_code=303)
         else:
             return display_first_vid_w_error_message(
-                request, prompt, 'Something went wrong, displaying first video.'
+                request, prompt, "Something went wrong, displaying first video."
             )
     else:
         return display_first_vid_w_error_message(
-            request, prompt, 'More than 200 videos already exist, cannot generate more.'
+            request, prompt, "More than 200 videos already exist, cannot generate more."
         )
 
 
 async def generate_video(prompt):
     async with aiohttp.ClientSession() as session:
         try:
-            async with session.post(f"http://{os.getenv('VIDEOGEN_SERVICE_HOST')}:8000/text2motion", json={"user_prompt": prompt}) as resp:
+            async with session.post(
+                f"http://{os.getenv('VIDEOGEN_SERVICE_HOST')}:8000/text2motion",
+                json={"user_prompt": prompt},
+            ) as resp:
                 if resp.status == 200:
                     response_json = await resp.json()
                     video_name = response_json.get("video_name")
@@ -186,8 +196,8 @@ async def generate_video(prompt):
 async def rate_video(request: Request):
     data = await request.json()
     client_host_ip = get_clients_ip(request)
-    video_name = data.get('video_name')
-    rating = data.get('rating')
+    video_name = data.get("video_name")
+    rating = data.get("rating")
     if not video_name or not rating:
         return {"status": "error", "message": "Invalid data"}
 
@@ -200,7 +210,7 @@ async def rate_video(request: Request):
         return {"status": "error", "message": "Invalid rating value"}
 
     # Record the rating in 'ratings.csv'
-    with open(RATING_FILE, 'a', newline='') as f:
+    with open(RATING_FILE, "a", newline="") as f:
         writer = csv.writer(f)
         writer.writerow([video_name, rating, client_host_ip])
 
@@ -213,4 +223,8 @@ async def rate_video(request: Request):
     else:
         average_rating = 0
 
-    return {"status": "success", "average_rating": average_rating, "number_of_ratings": number_of_ratings}
+    return {
+        "status": "success",
+        "average_rating": average_rating,
+        "number_of_ratings": number_of_ratings,
+    }
