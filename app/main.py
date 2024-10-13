@@ -154,7 +154,10 @@ def display_first_vid_w_error_message(request, prompt, error_msg):
 
 @app.post("/", response_class=HTMLResponse)
 async def create_video(request: Request, prompt: str = Form(...)):
-    prompt = ALLOWED_CHARACTERS_RE.sub("", prompt)
+    # Check if the prompt contains unallowed characters
+    if ALLOWED_CHARACTERS_RE.search(prompt):
+        error_message = "Your prompt contains unallowed characters. Please try again."
+        return display_first_vid_w_error_message(request, prompt, error_message)
     # Check for offensive content
     if FORBIDDEN_WORDS_RE.search(prompt):
         error_message = "Your prompt contains inappropriate language. Please try again."
